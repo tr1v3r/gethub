@@ -120,11 +120,11 @@ class OperateFile:
                 storepath = '.'
 
             if filename.endswith('.tar.gz'):
-                directory = '{}/{}'.format(storepath, filename.strip('.tar.gz'))
+                directory = '{}/{}'.format(storepath, filename.replace('.tar.gz', ''))
                 os.makedirs(directory, exist_ok=True)
                 subprocess.run(["tar", "xzf", filename, '-C', directory])
             elif filename.endswith('.zip'):
-                directory = '{}/{}'.format(storepath, filename.strip('.zip'))
+                directory = '{}/{}'.format(storepath, filename.replace('.zip', ''))
                 os.makedirs(directory, exist_ok=True)
                 subprocess.run(["unzip", "-o", filename, '-d', directory])
             else:
@@ -176,8 +176,8 @@ class OperateFile:
 
         if os.path.exists(filename):
             subprocess.run(['rm', '-rf', filename])
-            subprocess.run(['rm', '-rf', '{}/{}'.format(storepath, filename.strip('.tar.gz'))])
-            subprocess.run(['rm', '-rf', '{}/{}'.format(storepath, filename.strip('.zip'))])
+            subprocess.run(['rm', '-rf', '{}/{}'.format(storepath, filename.replace('.tar.gz', ''))])
+            subprocess.run(['rm', '-rf', '{}/{}'.format(storepath, filename.replace('.zip', ''))])
 
     def save(self, mode=None, record=None, recorded=None):
         if mode == "collect":
