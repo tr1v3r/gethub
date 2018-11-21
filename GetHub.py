@@ -179,31 +179,48 @@ class OperateFile:
             subprocess.run(['rm', '-rf', '{}/{}'.format(storepath, filename.replace('.tar.gz', ''))])
             subprocess.run(['rm', '-rf', '{}/{}'.format(storepath, filename.replace('.zip', ''))])
 
-    def save(self, mode=None, record=None, recorded=None):
+    def save(self, mode, type, record=None, recorded=None):
+        '''
+
+        :param mode: collect, downloaded
+        :param type: url, respository
+        :param record:
+        :param recorded:
+        :return:
+        '''
         if mode == "collect":
             with open(self.record_file, 'a') as f:
                 for item in record:
-                    f.write("{}\n".format(item))
+                    f.write("{},{}\n".format(type, item))
         elif mode == 'downloaded':
             recorded = []
             if os.path.exists(self.recorded_file):
                 with open(self.recorded_file, 'r') as f:
                     recorded = list(f.readlines())
                     recorded = map(lambda item: item.strip('\r\n'), recorded)
+            record = "{},{}".format(type, record)
             if record not in recorded:
                 with open(self.recorded_file, 'a') as f:
                     f.write("{}\n".format(record))
 
-    def read(self, download_record, downloaded_recorded):
+    def read(self, respository, download_record):
         if os.path.exists(self.record_file):
             with open(self.record_file, 'r') as f:
                 for line in f.readlines():
-                    download_record.append(line.strip('\r\n'))
+                    type, record = line.strip('\r\n').split(',')
+                    if type == "url":
+                        download_record.append(record)
+                    elif type == "respository":
+                        respository.append(record)
 
         if os.path.exists(self.recorded_file):
             with open(self.recorded_file, 'r') as f:
                 for line in f.readlines():
-                    downloaded_recorded.append(line.strip('\r\n'))
+                    type, record = line.strip('\r\n').split(',')
+                    if type == "url" and record in download_record:
+                        download_record.remove(record)
+                    elif type == "respository" and record in respository:
+                        respository.remove(record)
 
     def set_recordfile(self, record_file=None, recorded_file=None):
         if record_file is not None:
@@ -240,7 +257,7 @@ class GetCode:
         if mode == "search":
             if self.start_page == 1:
                 self.url.add_search("{}{}".format(self.url.base_url, self.url.exact_url))
-            for page in range(self.start_page, self.end_page + 1):
+            for page in range(self.start_page + 1, self.end_page + 1):
                 self.url.add_search("{}{}&p={}".format(self.url.base_url, self.url.exact_url, page))
         elif mode == 'detail':
             self.url.add_detail(["{}/{}/releases".format(self.url.base_url, respo) for respo in
@@ -349,6 +366,7 @@ class GetCode:
             html = self.gethtml(url)
             patterns = self.gen_patterns(mode='search')
             self.respository.extend(self.filterhtml(html, patterns))
+        self.respository = list(set(self.respository))
         self.gen_urls(mode="detail")
 
     def getdetail(self):
@@ -359,21 +377,18 @@ class GetCode:
                                              respo='/'.join(detail_url.split('/')[3:5]))
                 download_urls = self.filterhtml(html, patterns)
                 self.url.download_urls.extend(download_urls)
-
+        self.url.download_urls = list(set(self.url.download_urls))
         self.gen_urls(mode="download")
 
     def getfile(self):
         logger.info("Start download...")
         try:
             for url in self.url.download_urls:
-                if url in self.url.downloaded_urls:
-                    # logger.debug('Downloaded...')
-                    continue
                 filename = self.download(url, base_url=self.url.base_url, storepath=self.file.storepath)
                 directory = self.file.unzip(filename, )
                 self.file.collectfile(directory)
                 self.file.removetar(filename)
-                self.file.save(mode='downloaded', record=url)
+                self.file.save(mode='downloaded', type='url', record=url)
                 logger.info("{} done...".format(filename))
             logger.info("All done...")
         except Exception as e:
@@ -388,7 +403,7 @@ class GetCode:
                 directory = self.gitclone(respo=respo, storepath=self.file.storepath)
                 self.file.collectfile(directory)
                 self.file.removetar(directory)
-                self.file.save(mode='downloaded', record=respo)
+                self.file.save(mode='downloaded', type='respository', record=respo)
                 logger.info("{} done...".format(respo))
         except Exception as e:
             logger.error(e, exc_info=True)
@@ -397,15 +412,16 @@ class GetCode:
         if mode == 'web':
             self.getready()
             self.getdetail()
-            self.file.save(mode="collect", record=self.url.download_urls)
+            self.file.save(mode="collect", type='url', record=self.url.download_urls)
+            self.file.save(mode="collect", type='respository', record=self.respository)
         elif mode == 'file':
-            self.file.read(self.url.download_urls, self.url.downloaded_urls)
+            self.file.read(self.respository, self.url.download_urls)
         self.getsource()
         self.getfile()
 
 
 if __name__ == "__main__":
     get = GetCode(dstpath='white', storepath='github', baseurl="https://github.com",
-                  exacturl='/search?q=github&type=Repositories', start_page=1,
+                  exacturl='/search?l=Java+Server+Pages&q=import%3D"java.util.%2A&type=Code', start_page=1,
                   end_page=10)
     get.geton(mode='web')
