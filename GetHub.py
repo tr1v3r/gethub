@@ -515,8 +515,8 @@ class GetCode:
 
 
 if __name__ == "__main__":
-    get = GetCode(dstdir='/Users/river/h/Armory/webshell-white/white',
-                  storedir='/Users/river/h/Armory/webshell-white/github',
+    get = GetCode(dstdir='存储目标文件绝对路径',
+                  storedir='临时存储工程绝对路径',
                   baseurl="https://github.com",
                   exacturl='/search?l=Java+Server+Pages&q=cms&type=Code', start_page=1,
                   end_page=1)
